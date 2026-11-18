@@ -87,12 +87,13 @@ button{cursor:pointer;border:0;background:none}
 .board::before,.board::after{content:"";position:absolute;top:-4px;width:76px;height:20px;border-radius:3px;opacity:.6;pointer-events:none;z-index:1}
 .board::before{left:26px;background:var(--sun);transform:rotate(-5deg)}
 .board::after{right:26px;background:var(--sky);transform:rotate(4deg)}
-.burst{position:absolute;left:50%;top:50%;width:min(280px,58vw);transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:5}
+.burst{position:absolute;left:50%;top:50%;width:min(320px,calc(100vw - 32px));transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:5;
+  background:var(--surface);border:1.5px solid var(--line);border-radius:999px;box-shadow:0 6px 16px rgba(80,40,10,.15);padding:2px 10px}
 .burst svg{width:100%;height:auto;display:block}
-.burst text{font-family:var(--font-display);fill:var(--accent);font-size:42px}
+.burst text{font-family:var(--font-display);fill:var(--accent);font-size:38px}
 .burst.pop{animation:pop .95s ease-out}
-.burst text.miss-big{fill:var(--no);font-size:40px}
-.burst text.miss-sub{fill:var(--muted);font-size:20px}
+.burst .miss-big{fill:var(--no);font-size:30px}
+.burst .miss-sub{fill:var(--muted);font-size:18px}
 .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 #cv{z-index:1}
 .board.flash-o{animation:glowO .9s ease-out}
@@ -235,22 +236,20 @@ button{cursor:pointer;border:0;background:none}
         <span>여기에 답을 크게 쓰세요</span>
       </div></div>
       <div class="burst" id="burst" aria-hidden="true">
-        <svg viewBox="0 0 240 130">
+        <svg viewBox="0 0 300 56">
           <g class="f-sun">
-            <path transform="translate(34 34) scale(1.3)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
-            <path transform="translate(206 30) scale(1.1)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
-            <path transform="translate(196 104) scale(.8)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
+            <path transform="translate(30 28) scale(1.15)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
+            <path transform="translate(270 28) scale(1.15)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
+            <path transform="translate(246 12) scale(.5)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
           </g>
-          <path class="f-leaf" transform="translate(40 104) scale(.75)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
-          <circle cx="120" cy="18" r="4" class="f-sky"/><circle cx="70" cy="14" r="3" class="f-accent"/><circle cx="168" cy="118" r="3" class="f-accent"/>
-          <text x="120" y="80" text-anchor="middle">딩동댕!</text>
+          <path class="f-leaf" transform="translate(56 44) scale(.5)" d="M0-12l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L0 6.1l-7.1 3.7 1.3-7.9-5.7-5.6 7.9-1.1z"/>
+          <circle cx="62" cy="10" r="3" class="f-sky"/><circle cx="236" cy="46" r="2.5" class="f-accent"/>
+          <text x="150" y="41" text-anchor="middle">딩동댕!</text>
         </svg>
       </div>
       <div class="burst" id="miss" aria-hidden="true">
-        <svg viewBox="0 0 260 130">
-          <circle cx="40" cy="36" r="5" class="f-sky"/><circle cx="222" cy="30" r="4" class="f-sky"/><circle cx="210" cy="108" r="3" class="f-sun"/><circle cx="52" cy="104" r="3" class="f-leaf"/>
-          <text class="miss-big" x="130" y="66" text-anchor="middle">아쉬워요!</text>
-          <text class="miss-sub" x="130" y="100" text-anchor="middle">다음 문제 화이팅!</text>
+        <svg viewBox="0 0 300 56">
+          <text x="150" y="38" text-anchor="middle"><tspan class="miss-big">아쉬워요!</tspan><tspan class="miss-sub" dx="8">다음 문제 화이팅!</tspan></text>
         </svg>
       </div>
       <canvas class="fx" id="fx" aria-hidden="true"></canvas>
