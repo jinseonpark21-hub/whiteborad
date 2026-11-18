@@ -74,7 +74,7 @@ button{cursor:pointer;border:0;background:none}
 
 /* answer view */
 .answer{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
-.qhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.qhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative}
 .qno{font-family:var(--font-display);font-size:2.3rem;line-height:1;font-variant-numeric:tabular-nums}
 .qsub{color:var(--muted);font-size:.9rem}
 .badge{font-family:var(--font-display);font-size:1.05rem;padding:4px 12px;border-radius:999px}
@@ -87,11 +87,26 @@ button{cursor:pointer;border:0;background:none}
 .board::before,.board::after{content:"";position:absolute;top:-4px;width:76px;height:20px;border-radius:3px;opacity:.6;pointer-events:none;z-index:1}
 .board::before{left:26px;background:var(--sun);transform:rotate(-5deg)}
 .board::after{right:26px;background:var(--sky);transform:rotate(4deg)}
-.burst{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0;z-index:2}
-.burst svg{width:min(62%,340px);height:auto}
+.burst{position:absolute;left:50%;top:50%;width:min(280px,58vw);transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:5}
+.burst svg{width:100%;height:auto;display:block}
 .burst text{font-family:var(--font-display);fill:var(--accent);font-size:42px}
 .burst.pop{animation:pop .95s ease-out}
-@keyframes pop{0%{opacity:0;transform:scale(.6)}25%{opacity:1;transform:scale(1.08)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.burst text.miss-big{fill:var(--no);font-size:40px}
+.burst text.miss-sub{fill:var(--muted);font-size:20px}
+.fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+#cv{z-index:1}
+.board.flash-o{animation:glowO .9s ease-out}
+.board.flash-x{animation:glowX .8s ease-out}
+.mark.shake{animation:shake .45s ease-in-out}
+@keyframes glowX{0%{box-shadow:0 5px 0 var(--wood),0 0 0 0 var(--no)}40%{box-shadow:0 5px 0 var(--wood),0 0 0 12px var(--no-soft)}100%{box-shadow:0 5px 0 var(--wood),0 0 0 0 var(--no-soft)}}
+.mark.bump{animation:bump .35s ease-out}
+@keyframes glowO{0%{box-shadow:0 5px 0 var(--wood),0 0 0 0 var(--ok)}40%{box-shadow:0 5px 0 var(--wood),0 0 0 12px var(--ok-soft)}100%{box-shadow:0 5px 0 var(--wood),0 0 0 0 var(--ok-soft)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+.ghost+.ghost{margin-left:0}
+.board.flash-o .hint,.board.flash-x .hint{visibility:hidden}
+.ghost[aria-pressed="false"]{opacity:.7}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
 .board canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
 .hint{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;color:var(--board-hint);
   font-family:var(--font-display);font-size:clamp(1.2rem,3vw,1.9rem);text-align:center;padding:16px}
@@ -175,7 +190,7 @@ button{cursor:pointer;border:0;background:none}
   .row{grid-template-columns:4.5em minmax(0,1fr) 5.5em;}
   .row .del{grid-column:1/-1;justify-self:end}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}.burst.pop{animation:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.burst.pop,.board.flash-o,.board.flash-x,.mark.shake,.mark.bump{animation:none}}
 </style>
 
 </head>
@@ -200,6 +215,7 @@ button{cursor:pointer;border:0;background:none}
       <div class="qno" id="qno">1번</div>
       <div class="qsub" id="qsub"></div>
       <div class="badge" id="badge" hidden></div>
+      <button class="ghost" id="sndBtn" type="button" aria-pressed="true">소리 켬</button>
       <button class="ghost" id="fsBtn" type="button">전체 화면</button>
     </div>
     <div class="board" id="board">
@@ -230,6 +246,14 @@ button{cursor:pointer;border:0;background:none}
           <text x="120" y="80" text-anchor="middle">딩동댕!</text>
         </svg>
       </div>
+      <div class="burst" id="miss" aria-hidden="true">
+        <svg viewBox="0 0 260 130">
+          <circle cx="40" cy="36" r="5" class="f-sky"/><circle cx="222" cy="30" r="4" class="f-sky"/><circle cx="210" cy="108" r="3" class="f-sun"/><circle cx="52" cy="104" r="3" class="f-leaf"/>
+          <text class="miss-big" x="130" y="66" text-anchor="middle">아쉬워요!</text>
+          <text class="miss-sub" x="130" y="100" text-anchor="middle">다음 문제 화이팅!</text>
+        </svg>
+      </div>
+      <canvas class="fx" id="fx" aria-hidden="true"></canvas>
     </div>
     <div class="controls">
       <div class="group tools">
@@ -484,11 +508,74 @@ button{cursor:pointer;border:0;background:none}
     save(); redraw(); renderHead(); renderStrip();
   };
 
+  /* ---------- effects ---------- */
+  const fx=$('fx'), fxc=fx.getContext('2d');
+  const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  let parts=[], fxRaf=0, fxEnd=0, fxW=0, fxH=0;
+  function replay(el,cls){el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);}
+  function confetti(){
+    if(reduceMotion()) return;
+    const r=board.getBoundingClientRect(), d=window.devicePixelRatio||1;
+    fxW=r.width; fxH=r.height;
+    fx.width=Math.round(fxW*d); fx.height=Math.round(fxH*d); fxc.setTransform(d,0,0,d,0,0);
+    const cs=getComputedStyle(document.documentElement);
+    const cols=['--sun','--accent','--leaf','--sky','--ok'].map(k=>cs.getPropertyValue(k).trim()||'#ffc947');
+    const cx=fxW/2, cy=fxH*0.55;
+    for(let i=0;i<90;i++){
+      const a=Math.random()*Math.PI*2, sp=3+Math.random()*8;
+      parts.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-6,w:6+Math.random()*8,h:4+Math.random()*5,
+        rot:Math.random()*6.28,vr:(Math.random()-.5)*.4,c:cols[i%cols.length]});
+    }
+    fxEnd=performance.now()+1600;
+    if(!fxRaf) fxRaf=requestAnimationFrame(stepFx);
+  }
+  function stepFx(now){
+    fxc.clearRect(0,0,fxW,fxH);
+    const left=fxEnd-now, alpha=Math.max(0,Math.min(1,left/450));
+    parts.forEach(p=>{
+      p.vy+=0.3; p.vx*=0.985; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr;
+      fxc.save(); fxc.globalAlpha=alpha; fxc.translate(p.x,p.y); fxc.rotate(p.rot);
+      fxc.fillStyle=p.c; fxc.fillRect(-p.w/2,-p.h/2,p.w,p.h); fxc.restore();
+    });
+    if(left>0) fxRaf=requestAnimationFrame(stepFx);
+    else {parts=[]; fxRaf=0; fxc.clearRect(0,0,fxW,fxH);}
+  }
+  let actx=null;
+  function tone(f,t,d,type,v){
+    const o=actx.createOscillator(), g=actx.createGain(), s=actx.currentTime+t;
+    o.type=type; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,s); g.gain.exponentialRampToValueAtTime(v,s+0.02); g.gain.exponentialRampToValueAtTime(0.0001,s+d);
+    o.connect(g); g.connect(actx.destination); o.start(s); o.stop(s+d+0.05);
+  }
+  function sound(kind){
+    if(S.sound===false) return;
+    try{
+      if(!actx){const A=window.AudioContext||window.webkitAudioContext; if(!A) return; actx=new A();}
+      if(actx.state==='suspended') actx.resume();
+      if(kind==='o'){tone(523.25,0,.35,'triangle',.22); tone(659.25,.12,.35,'triangle',.22); tone(783.99,.24,.6,'triangle',.22);}
+      else {tone(392,0,.28,'sine',.16); tone(311.13,.17,.45,'sine',.16);}
+    }catch(e){}
+  }
+  const sndBtn=$('sndBtn');
+  /* the O/X messages sit above the board (next to the question number) so they never cover the answer */
+  const qhead=document.querySelector('.qhead');
+  qhead.insertBefore($('burst'),sndBtn); qhead.insertBefore($('miss'),sndBtn);
+  function renderSnd(){const on=S.sound!==false; sndBtn.textContent=on?'소리 켬':'소리 끔'; sndBtn.setAttribute('aria-pressed',String(on));}
+  sndBtn.onclick=()=>{S.sound=(S.sound===false); save(); renderSnd();};
+  renderSnd();
+
   /* ---------- marking & nav ---------- */
   function mark(m){
     const e=ensure(S.r,qNow()); e.m=(e.m===m)?null:m;
-    if(e.m==='o'){const b=$('burst'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');}
+    if(e.m==='o'){
+      $('miss').classList.remove('pop'); replay($('burst'),'pop'); replay(board,'flash-o'); replay($('okBtn'),'bump');
+      confetti(); sound('o');
+    }else if(e.m==='x'){
+      $('burst').classList.remove('pop'); replay($('miss'),'pop'); replay(board,'flash-x'); replay($('noBtn'),'shake');
+      sound('x');
+    }
     save(); renderHead(); renderStrip();
+    setTimeout(redraw,1100);
   }
   $('okBtn').onclick=()=>mark('o');
   $('noBtn').onclick=()=>mark('x');
