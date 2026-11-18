@@ -87,13 +87,15 @@ button{cursor:pointer;border:0;background:none}
 .board::before,.board::after{content:"";position:absolute;top:-4px;width:76px;height:20px;border-radius:3px;opacity:.6;pointer-events:none;z-index:1}
 .board::before{left:26px;background:var(--sun);transform:rotate(-5deg)}
 .board::after{right:26px;background:var(--sky);transform:rotate(4deg)}
-.burst{position:absolute;left:50%;top:50%;width:min(320px,calc(100vw - 32px));transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:5;
+.burst{position:absolute;left:50%;top:50%;width:min(250px,calc(100vw - 32px));transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:5;
   background:var(--surface);border:1.5px solid var(--line);border-radius:999px;box-shadow:0 6px 16px rgba(80,40,10,.15);padding:2px 10px}
 .burst svg{width:100%;height:auto;display:block}
 .burst text{font-family:var(--font-display);fill:var(--accent);font-size:38px}
 .burst.pop{animation:pop .95s ease-out}
-.burst .miss-big{fill:var(--no);font-size:30px}
-.burst .miss-sub{fill:var(--muted);font-size:18px}
+.burst.miss{width:max-content;max-width:calc(100vw - 32px);display:flex;align-items:baseline;justify-content:center;gap:4px 10px;flex-wrap:wrap;
+  padding:4px 18px;border-radius:24px;font-family:var(--font-display);line-height:1.15;text-align:center}
+.miss-big{color:var(--no);font-size:1.45rem;font-weight:400;white-space:nowrap}
+.miss-sub{color:var(--muted);font-size:1rem;white-space:nowrap}
 .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 #cv{z-index:1}
 .board.flash-o{animation:glowO .9s ease-out}
@@ -247,10 +249,8 @@ button{cursor:pointer;border:0;background:none}
           <text x="150" y="41" text-anchor="middle">딩동댕!</text>
         </svg>
       </div>
-      <div class="burst" id="miss" aria-hidden="true">
-        <svg viewBox="0 0 300 56">
-          <text x="150" y="38" text-anchor="middle"><tspan class="miss-big">아쉬워요!</tspan><tspan class="miss-sub" dx="8">다음 문제 화이팅!</tspan></text>
-        </svg>
+      <div class="burst miss" id="miss" aria-hidden="true">
+        <span class="miss-big">아쉬워요!</span><span class="miss-sub">다음 문제 화이팅!</span>
       </div>
       <canvas class="fx" id="fx" aria-hidden="true"></canvas>
     </div>
