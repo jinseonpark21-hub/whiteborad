@@ -181,6 +181,32 @@ button{cursor:pointer;border:0;background:none}
 .linkbox input{flex:1 1 240px;min-width:0;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:.8rem;font-family:ui-monospace,Menlo,Consolas,monospace}
 .copied{font-size:.85rem;color:var(--ok);min-height:1.2em}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;z-index:20;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+/* teacher lock */
+.mark.sub{background:var(--accent);color:var(--accent-ink);min-width:240px}
+.num.sub{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.num.sub::after{display:none}
+.board.locked canvas{cursor:not-allowed}
+.lock-tag{position:absolute;right:12px;bottom:12px;z-index:4;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+  background:var(--surface);border:1.5px solid var(--line);color:var(--muted);font-size:.85rem;font-weight:500;box-shadow:0 3px 10px rgba(80,40,10,.12)}
+.lock-tag svg{width:14px;height:14px;fill:currentColor}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.92rem;line-height:1.5;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--accent);margin-top:2px;flex:none}
+.pinrow{display:flex;gap:8px;flex-wrap:wrap}
+.pinrow input{flex:1 1 110px;min-width:0;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:1rem;letter-spacing:.3em}
+.copied.err{color:var(--no)}
+.pin-card{max-width:340px;align-items:center;text-align:center}
+.pin-card h2{font-family:var(--font-display);font-weight:400;font-size:1.35rem;margin:0}
+.pin-card .note{margin:0;min-height:1.4em}
+.pin-dots{display:flex;gap:14px;justify-content:center;margin:4px 0}
+.pin-dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent)}
+.pin-dots i.on{background:var(--accent)}
+.pin-dots.shake{animation:shake .45s ease-in-out}
+.pin-pad{display:grid;grid-template-columns:repeat(3,64px);gap:10px;justify-content:center}
+.pin-pad button{height:56px;border-radius:14px;background:var(--chip);font-family:var(--font-display);font-size:1.4rem}
+.pin-pad button:disabled{opacity:.4}
+.pin-card .modal-actions{justify-content:center}
+.cell{position:relative}
+.cell .ed{position:absolute;top:2px;right:5px;font-style:normal;font-size:.7rem;color:var(--muted)}
 /* result image */
 .result-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(45,25,12,.45);
@@ -264,6 +290,7 @@ button{cursor:pointer;border:0;background:none}
         <span class="miss-big">아쉬워요!</span><span class="miss-sub">다음 문제 화이팅!</span>
       </div>
       <canvas class="fx" id="fx" aria-hidden="true"></canvas>
+      <button class="lock-tag" id="lockTag" type="button" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 7V5a4 4 0 0 1 8 0v2h1v8H3V7zm2 0h4V5a2 2 0 0 0-4 0z"/></svg><span id="lockText">제출 완료</span></button>
     </div>
     <div class="controls">
       <div class="group tools">
@@ -273,6 +300,7 @@ button{cursor:pointer;border:0;background:none}
       <div class="group marks">
         <button class="mark o" id="okBtn" type="button" aria-pressed="false"><span class="sym">O</span>정답</button>
         <button class="mark x" id="noBtn" type="button" aria-pressed="false"><span class="sym">X</span>오답</button>
+        <button class="mark sub" id="subBtn" type="button" hidden>답 제출하기</button>
       </div>
       <div class="group nav">
         <button class="tool" id="prevBtn" type="button">◀ 이전</button>
@@ -285,6 +313,15 @@ button{cursor:pointer;border:0;background:none}
   <section class="settings" id="settingsView" hidden></section>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="modal" id="pinModal" role="dialog" aria-modal="true" aria-labelledby="pinTitle" hidden>
+  <div class="modal-card pin-card">
+    <h2 id="pinTitle">선생님 비밀번호</h2>
+    <p class="note" id="pinMsg"></p>
+    <div class="pin-dots" id="pinDots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="pin-pad" id="pinPad"></div>
+    <div class="modal-actions"><button class="tool" id="pinCancel" type="button">취소</button></div>
+  </div>
+</div>
 <div class="modal" id="shotModal" role="dialog" aria-modal="true" aria-labelledby="shotTitle" hidden>
   <div class="modal-card">
     <div class="modal-head">
@@ -312,7 +349,7 @@ button{cursor:pointer;border:0;background:none}
     '</svg>';
   const DEFAULT_ROUNDS=[{sub:'1학기',n:40},{sub:'2학기',n:40},{sub:'교과통합',n:10}];
   const DEFAULT_TITLE='어휘력 챌린지';
-  const blank=()=>({name:'',title:DEFAULT_TITLE,view:'answer',r:1,rounds:DEFAULT_ROUNDS.map(x=>({...x})),q:{},data:{}});
+  const blank=()=>({name:'',title:DEFAULT_TITLE,pin:'',submit:true,view:'answer',r:1,rounds:DEFAULT_ROUNDS.map(x=>({...x})),q:{},data:{}});
 
   function load(){
     try{
@@ -340,16 +377,22 @@ button{cursor:pointer;border:0;background:none}
   function fromHex(h){try{return new TextDecoder().decode(new Uint8Array((h.match(/../g)||[]).map(x=>parseInt(x,16))))}catch(e){return ''}}
   const titleNow=()=>(S.title||'').trim()||DEFAULT_TITLE;
   /* link carries the challenge title + each round's count and name (student name and records never go in it) */
+  /* teacher PIN is stored only as a short hash (also in the share link), never as the digits */
+  function pinHash(p){let h=0x811c9dc5; const s='vocab-board:'+p; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0;} return h.toString(16).padStart(8,'0');}
   function settingsCode(){
     let c='set-'+S.rounds.map(r=>r.n+(r.sub?'x'+toHex(r.sub):'')).join('-');
     if(titleNow()!==DEFAULT_TITLE) c+='-t'+toHex(titleNow());
+    if(S.pin) c+='-p'+S.pin;
+    if(S.submit===false) c+='-s0';
     return c;
   }
   function parseCode(h){
     h=(h||'').replace(/^#/,'');
     if(h.indexOf('set-')!==0) return null;
-    const ns=[]; let title=DEFAULT_TITLE;
+    const ns=[]; let title=DEFAULT_TITLE, pin='', submit=true;
     for(const p of h.slice(4).split('-')){
+      if(/^p[0-9a-f]{8}$/.test(p)){pin=p.slice(1);continue;}
+      if(p==='s0'){submit=false;continue;}
       let m=/^(\d{1,3})(?:x([0-9a-f]*))?$/.exec(p);
       if(m){
         if(m[2]&&m[2].length%2) return null;
@@ -361,7 +404,7 @@ button{cursor:pointer;border:0;background:none}
       return null;
     }
     if(!ns.length||ns.length>MAX_ROUNDS) return null;
-    return {ns,title};
+    return {ns,title,pin,submit};
   }
   function syncHash(){
     const code='#'+settingsCode();
@@ -371,9 +414,11 @@ button{cursor:pointer;border:0;background:none}
   function applyHash(){
     const c=parseCode(location.hash);
     if(!c) return false;
-    const same=c.title===titleNow()&&c.ns.length===S.rounds.length&&c.ns.every((r,i)=>S.rounds[i].n===r.n&&(S.rounds[i].sub||'')===r.sub);
+    if(S.pin&&c.pin!==S.pin){ setTimeout(()=>toast('선생님 비밀번호가 걸려 있어서 이 링크의 설정은 적용하지 않았어요.'),400); return false; }
+    const same=c.title===titleNow()&&c.ns.length===S.rounds.length&&c.ns.every((r,i)=>S.rounds[i].n===r.n&&(S.rounds[i].sub||'')===r.sub)
+      &&(c.pin||S.pin||'')===(S.pin||'')&&c.submit===(S.submit!==false);
     if(same) return false;
-    S.title=c.title;
+    S.title=c.title; S.pin=c.pin||S.pin||''; S.submit=c.submit;
     S.rounds=c.ns.map(r=>({sub:r.sub,n:r.n}));
     if(S.r>S.rounds.length) S.r=1; save(); return true;
   }
@@ -414,7 +459,9 @@ button{cursor:pointer;border:0;background:none}
         S.view==='answer'&&S.r===r.id,()=>{S.view='answer';S.r=r.id;save();renderAll();}));
     });
     tabs.appendChild(tabBtn('결과표',S.view==='result',()=>{S.view='result';save();renderAll();}));
-    tabs.appendChild(tabBtn('⚙ 설정',S.view==='settings',()=>{S.view='settings';save();renderAll();},'gear'));
+    tabs.appendChild(tabBtn('⚙ 설정',S.view==='settings',async()=>{
+      if(S.view!=='settings'&&!(await askPin('설정을 열려면 비밀번호를 누르세요'))) return;
+      S.view='settings';save();renderAll();},'gear'));
   }
 
   /* ---------- number strip ---------- */
@@ -426,7 +473,7 @@ button{cursor:pointer;border:0;background:none}
       const b=document.createElement('button');
       b.type='button';b.textContent=q;
       let cls='num';
-      if(e&&e.m) cls+=' '+e.m; else if(e&&e.s.length) cls+=' written';
+      if(e&&e.m) cls+=' '+e.m; else if(e&&e.sub) cls+=' sub'; else if(e&&e.s.length) cls+=' written';
       if(q===now) cls+=' cur';
       b.className=cls;
       b.setAttribute('aria-label',q+'번'+(e&&e.m?(e.m==='o'?' 정답':' 오답'):''));
@@ -449,8 +496,12 @@ button{cursor:pointer;border:0;background:none}
     $('noBtn').setAttribute('aria-pressed',String(m==='x'));
     $('prevBtn').disabled=q<=1;
     $('nextBtn').textContent=q>=r.n?'결과표 보기 ▶':'다음 ▶';
-    $('undoBtn').disabled=!((e&&e.s.length)||(cleared&&cleared.key===S.r+'-'+q));
-    $('clearBtn').disabled=!(e&&e.s.length);
+    const locked=!!(e&&(e.sub||e.m)), needSubmit=S.submit!==false&&!locked;
+    $('subBtn').hidden=!needSubmit; $('okBtn').hidden=needSubmit; $('noBtn').hidden=needSubmit;
+    board.classList.toggle('locked',locked);
+    $('lockTag').hidden=!locked; $('lockText').textContent=m?'채점 완료':'제출 완료';
+    $('undoBtn').disabled=locked||!((e&&e.s.length)||(cleared&&cleared.key===S.r+'-'+q));
+    $('clearBtn').disabled=locked||!(e&&e.s.length);
   }
 
   function go(q){
@@ -499,6 +550,8 @@ button{cursor:pointer;border:0;background:none}
   cv.addEventListener('pointerdown',ev=>{
     if(pid!==null) return;
     if(ev.pointerType==='mouse'&&ev.button!==0) return;
+    const e0=get(S.r,qNow());
+    if(e0&&(e0.sub||e0.m)){ lockedToast(); ev.preventDefault(); return; }
     pid=ev.pointerId; try{cv.setPointerCapture(pid)}catch(e){}
     cur=[pt(ev)]; schedule(); ev.preventDefault();
   });
@@ -576,6 +629,7 @@ button{cursor:pointer;border:0;background:none}
       if(!actx){const A=window.AudioContext||window.webkitAudioContext; if(!A) return; actx=new A();}
       if(actx.state==='suspended') actx.resume();
       if(kind==='o'){tone(523.25,0,.35,'triangle',.22); tone(659.25,.12,.35,'triangle',.22); tone(783.99,.24,.6,'triangle',.22);}
+      else if(kind==='sub'){tone(587.33,0,.12,'sine',.12); tone(880,.08,.18,'sine',.1);}
       else {tone(392,0,.28,'sine',.16); tone(311.13,.17,.45,'sine',.16);}
     }catch(e){}
   }
@@ -587,9 +641,73 @@ button{cursor:pointer;border:0;background:none}
   sndBtn.onclick=()=>{S.sound=(S.sound===false); save(); renderSnd();};
   renderSnd();
 
+  /* ---------- teacher PIN dialog ---------- */
+  let pinBuf='', pinResolve=null, pinFails=0, pinBlockedUntil=0;
+  const pinPad=$('pinPad');
+  ['1','2','3','4','5','6','7','8','9','지우기','0',''].forEach(k=>{
+    const b=document.createElement('button'); b.type='button'; b.textContent=k;
+    if(!k){b.disabled=true; b.style.visibility='hidden';}
+    if(k==='지우기'){b.style.fontSize='.95rem'; b.onclick=()=>{pinBuf=pinBuf.slice(0,-1); paintDots();};}
+    else if(k) b.onclick=()=>pinKey(k);
+    pinPad.appendChild(b);
+  });
+  function paintDots(){Array.from($('pinDots').children).forEach((d,i)=>d.classList.toggle('on',i<pinBuf.length));}
+  function pinKey(k){
+    if(Date.now()<pinBlockedUntil){$('pinMsg').textContent='잠시 후에 다시 눌러 주세요.'; return;}
+    if(pinBuf.length>=4) return;
+    pinBuf+=k; paintDots();
+    if(pinBuf.length===4){
+      if(pinHash(pinBuf)===S.pin){pinFails=0; closePin(true);}
+      else{
+        pinFails++; replay($('pinDots'),'shake');
+        if(pinFails>=5){pinBlockedUntil=Date.now()+30000; pinFails=0; $('pinMsg').textContent='5번 틀렸어요. 30초 뒤에 다시 해 주세요.';}
+        else $('pinMsg').textContent='비밀번호가 달라요.';
+        setTimeout(()=>{pinBuf=''; paintDots();},350);
+      }
+    }
+  }
+  function closePin(ok){$('pinModal').hidden=true; pinBuf=''; paintDots(); const r=pinResolve; pinResolve=null; if(r) r(ok);}
+  function askPin(reason){
+    if(!S.pin) return Promise.resolve(true);
+    if(pinResolve) closePin(false);
+    pinBuf=''; paintDots(); $('pinMsg').textContent=reason||'';
+    $('pinModal').hidden=false;
+    return new Promise(res=>{pinResolve=res;});
+  }
+  $('pinCancel').onclick=()=>closePin(false);
+  $('pinModal').addEventListener('click',ev=>{ if(ev.target===ev.currentTarget) closePin(false); });
+  document.addEventListener('keydown',ev=>{
+    if($('pinModal').hidden) return;
+    if(/^[0-9]$/.test(ev.key)){ev.preventDefault(); pinKey(ev.key);}
+    else if(ev.key==='Backspace'){ev.preventDefault(); pinBuf=pinBuf.slice(0,-1); paintDots();}
+    else if(ev.key==='Escape'){ev.preventDefault(); closePin(false);}
+  });
+  let lockToastAt=0;
+  function lockedToast(){ if(Date.now()-lockToastAt<2500) return; lockToastAt=Date.now(); toast('제출한 답은 고칠 수 없어요. 고쳐야 하면 선생님께 말씀드리세요.'); }
+
+  /* ---------- submit, lock & unlock ---------- */
+  function submitAns(){
+    const e=ensure(S.r,qNow()); if(e.sub||e.m) return;
+    e.sub=true; sound('sub'); save(); renderHead(); renderStrip();
+  }
+  async function unlockQuestion(){
+    const e=get(S.r,qNow()); if(!e||!(e.sub||e.m)) return;
+    if(!(await askPin('이 문제를 다시 쓸 수 있게 풀까요? 채점도 지워져요.'))) return;
+    if(e.m) e.edits=(e.edits||0)+1;
+    e.sub=false; e.m=null; save(); renderHead(); renderStrip(); redraw();
+    toast('다시 쓸 수 있게 풀었어요.');
+  }
+  $('subBtn').onclick=submitAns;
+  $('lockTag').onclick=unlockQuestion;
+
   /* ---------- marking & nav ---------- */
-  function mark(m){
-    const e=ensure(S.r,qNow()); e.m=(e.m===m)?null:m;
+  async function mark(m){
+    const e=ensure(S.r,qNow());
+    if(S.submit!==false&&!e.sub&&!e.m){ toast('먼저 답을 제출해 주세요.'); return; }
+    if(e.m){
+      if(!(await askPin(e.m===m?'채점을 지우려면 비밀번호를 누르세요':'채점을 바꾸려면 비밀번호를 누르세요'))) return;
+      e.edits=(e.edits||0)+1; e.m=(e.m===m)?null:m;
+    } else e.m=m;
     if(e.m==='o'){
       $('miss').classList.remove('pop'); replay($('burst'),'pop'); replay(board,'flash-o'); replay($('okBtn'),'bump');
       confetti(); sound('o');
@@ -608,7 +726,7 @@ button{cursor:pointer;border:0;background:none}
     go(qNow()+1);
   };
   document.addEventListener('keydown',ev=>{
-    if(S.view!=='answer'||ev.target.tagName==='INPUT') return;
+    if(S.view!=='answer'||ev.target.tagName==='INPUT'||!$('pinModal').hidden) return;
     if(ev.key==='ArrowRight'){ $('nextBtn').click(); }
     else if(ev.key==='ArrowLeft'){ go(qNow()-1); }
     else if(ev.key==='o'||ev.key==='O'){ mark('o'); }
@@ -638,6 +756,7 @@ button{cursor:pointer;border:0;background:none}
     return {o,x,left:r.n-o-x};
   }
   let confirming=false, confirmRound=null;
+  function editsTotal(){let n=0; rounds().forEach(r=>{for(let q=1;q<=r.n;q++){const e=get(r.id,q); if(e&&e.edits) n+=e.edits;}}); return n;}
   function clearRound(id){
     delete S.data[id]; S.q[id]=1;
     if(cleared&&cleared.key.indexOf(id+'-')===0) cleared=null;
@@ -658,7 +777,7 @@ button{cursor:pointer;border:0;background:none}
     const tc=document.createElement('div'); tc.className='card total';
     tc.innerHTML=TROPHY+'<div class="label">'+(S.name?esc(S.name)+' · ':'')+'총 정답 개수</div>'+
       '<div class="big">'+totalO+'<small> / '+totalN+'</small></div>'+
-      '<div class="meta">채점한 문제 '+totalMarked+'개 · 오답 '+(totalMarked-totalO)+'개</div>';
+      '<div class="meta">채점한 문제 '+totalMarked+'개 · 오답 '+(totalMarked-totalO)+'개'+(editsTotal()?' · 채점 수정 '+editsTotal()+'번':'')+'</div>';
     sum.appendChild(tc);
     t.forEach(({r,o,x,left})=>{
       const c=document.createElement('div'); c.className='card';
@@ -677,7 +796,7 @@ button{cursor:pointer;border:0;background:none}
       const rb=document.createElement('button'); rb.type='button'; rb.className='tool sm';
       rb.textContent=r.label+' 기록 지우기';
       rb.disabled=!hasRecords(r.id);
-      rb.onclick=()=>{confirmRound=r.id; confirming=false; renderResult();};
+      rb.onclick=async()=>{ if(!(await askPin(r.label+' 기록을 지우려면 비밀번호를 누르세요'))) return; confirmRound=r.id; confirming=false; renderResult();};
       head.appendChild(rb); sec.appendChild(head);
       if(confirmRound===r.id){
         const c=document.createElement('div'); c.className='confirm';
@@ -693,7 +812,7 @@ button{cursor:pointer;border:0;background:none}
         const e=get(r.id,q), m=e&&e.m;
         const c=document.createElement('button'); c.type='button';
         c.className='cell'+(m?' '+m:'');
-        c.innerHTML='<b>'+q+'</b><em>'+(m==='o'?'O':m==='x'?'X':'·')+'</em>';
+        c.innerHTML='<b>'+q+'</b><em>'+(m==='o'?'O':m==='x'?'X':'·')+'</em>'+(e&&e.edits?'<i class="ed" title="채점을 바꾼 문제">✎</i>':'');
         c.setAttribute('aria-label',r.label+' '+q+'번 '+(m==='o'?'정답':m==='x'?'오답':'미채점')+', 답 보러 가기');
         c.onclick=()=>{S.view='answer';S.r=r.id;S.q[r.id]=q;save();renderAll();};
         cells.appendChild(c);
@@ -704,12 +823,12 @@ button{cursor:pointer;border:0;background:none}
     const d=document.createElement('div'); d.className='danger';
     if(!confirming){
       const b=document.createElement('button'); b.type='button'; b.className='tool'; b.textContent='새로 시작하기 (기록 모두 지우기)';
-      b.onclick=()=>{confirming=true;confirmRound=null;renderResult();};
+      b.onclick=async()=>{ if(!(await askPin('기록을 모두 지우려면 비밀번호를 누르세요'))) return; confirming=true;confirmRound=null;renderResult();};
       d.appendChild(b);
     }else{
       const s=document.createElement('span'); s.textContent='쓴 답과 채점 기록이 모두 지워져요. 라운드 설정은 그대로 남아요. 지울까요?';
       const y=document.createElement('button'); y.type='button'; y.className='tool red'; y.textContent='모두 지우기';
-      y.onclick=()=>{const keep=S.rounds, keepT=S.title; S=blank(); S.rounds=keep; S.title=keepT; S.view='result'; confirming=false;cleared=null;nameInput.value='';save();renderAll();};
+      y.onclick=()=>{const keep=S.rounds, keepT=S.title, keepP=S.pin, keepS=S.submit; S=blank(); S.rounds=keep; S.title=keepT; S.pin=keepP; S.submit=keepS; S.view='result'; confirming=false;cleared=null;nameInput.value='';save();renderAll();};
       const n=document.createElement('button'); n.type='button'; n.className='tool'; n.textContent='취소';
       n.onclick=()=>{confirming=false;renderResult();};
       d.append(s,y,n);
@@ -789,6 +908,7 @@ button{cursor:pointer;border:0;background:none}
         rr(g,cx,cy,CW,CH,14,m==='o'?P.okSoft:m==='x'?P.noSoft:P.card,m==='o'?P.ok:m==='x'?P.no:P.line);
         g.textAlign='center'; g.fillStyle=P.muted; g.font='500 16px '+BF; g.fillText(String(q),cx+CW/2,cy+24);
         g.fillStyle=m==='o'?P.ok:m==='x'?P.no:P.hint; g.font='34px '+DF; g.fillText(m==='o'?'O':m==='x'?'X':'·',cx+CW/2,cy+62);
+        if(e&&e.edits){g.fillStyle=P.muted; g.font='500 15px '+BF; g.textAlign='right'; g.fillText('✎',cx+CW-7,cy+20);}
         g.textAlign='left';
       }
       y+=Math.ceil(r.n/COLS)*(CH+GAP)+26;
@@ -898,8 +1018,38 @@ button{cursor:pointer;border:0;background:none}
     foot.append(add,tot); p.appendChild(foot);
     v.appendChild(p);
 
+    const lp=document.createElement('div'); lp.className='panel';
+    lp.innerHTML='<h2>선생님 잠금</h2>';
+    const subLab=document.createElement('label'); subLab.className='check'; subLab.htmlFor='submitMode';
+    const sc=document.createElement('input'); sc.type='checkbox'; sc.id='submitMode'; sc.checked=S.submit!==false;
+    sc.addEventListener('change',()=>{S.submit=sc.checked; save(); syncHash(); updateTotal();});
+    const st=document.createElement('span'); st.innerHTML='<b>답 제출 후 채점하기</b><br>학생이 [답 제출하기]를 누르면 답판이 잠겨요. 정답을 공개한 뒤에 답을 고칠 수 없고, 제출한 뒤에만 O/X를 누를 수 있어요.';
+    subLab.append(sc,st); lp.appendChild(subLab);
+    const pinInfo=document.createElement('p'); pinInfo.className='note';
+    pinInfo.textContent=(S.pin?'비밀번호가 정해져 있어요. ':'비밀번호를 정하면 ')+'채점 바꾸기, 답 다시 쓰게 하기, 기록 지우기, 설정 열기에 선생님 비밀번호가 필요해요. 바뀐 채점은 결과표에 ✎로 표시돼요.';
+    lp.appendChild(pinInfo);
+    const pr=document.createElement('div'); pr.className='pinrow';
+    const p1=document.createElement('input'); p1.type='password'; p1.inputMode='numeric'; p1.maxLength=4; p1.id='pinNew'; p1.placeholder='숫자 4자리'; p1.autocomplete='new-password'; p1.setAttribute('aria-label','새 비밀번호');
+    const p2=document.createElement('input'); p2.type='password'; p2.inputMode='numeric'; p2.maxLength=4; p2.id='pinNew2'; p2.placeholder='한 번 더'; p2.autocomplete='new-password'; p2.setAttribute('aria-label','새 비밀번호 확인');
+    const ps=document.createElement('button'); ps.type='button'; ps.className='tool next'; ps.textContent=S.pin?'비밀번호 바꾸기':'비밀번호 정하기';
+    const pm=document.createElement('div'); pm.className='copied'; pm.setAttribute('aria-live','polite');
+    ps.onclick=()=>{
+      const a=p1.value.trim(), b=p2.value.trim(); pm.classList.add('err');
+      if(!/^\d{4}$/.test(a)){pm.textContent='숫자 4자리로 정해 주세요.'; return;}
+      if(a!==b){pm.textContent='두 번 쓴 비밀번호가 달라요.'; return;}
+      S.pin=pinHash(a); save(); syncHash(); renderSettings();
+      toast('비밀번호를 정했어요. 아래 링크를 다시 복사해 학생 태블릿에서 열어 주세요.');
+    };
+    pr.append(p1,p2,ps); lp.append(pr,pm);
+    if(S.pin){
+      const rm=document.createElement('button'); rm.type='button'; rm.className='tool'; rm.textContent='비밀번호 없애기';
+      rm.onclick=()=>{S.pin=''; save(); syncHash(); renderSettings(); toast('이 기기의 비밀번호를 없앰어요.');};
+      const rr0=document.createElement('div'); rr0.className='btnrow'; rr0.appendChild(rm); lp.appendChild(rr0);
+    }
+    v.appendChild(lp);
+
     const sp=document.createElement('div'); sp.className='panel';
-    sp.innerHTML='<h2>이 설정으로 공유하기</h2><p class="note">아래 링크로 열면 챌린지 이름, 라운드 개수, 라운드 이름과 문항 수가 지금 설정대로 맞춰져서 열려요. 학생 이름은 링크에 담기지 않아요. 학생 태블릿이나 다른 선생님께 이 링크를 보내 주세요. 쓴 답과 채점 기록은 링크에 담기지 않아요.</p>';
+    sp.innerHTML='<h2>이 설정으로 공유하기</h2><p class="note">아래 링크로 열면 챌린지 이름, 라운드 개수, 라운드 이름과 문항 수가 지금 설정대로 맞춰져서 열려요. 학생 이름은 링크에 담기지 않아요. 선생님 비밀번호와 잠금 설정도 링크에 담겨요. 비밀번호는 숫자 그대로가 아니라 알아볼 수 없게 바꿔서 담겨요. 학생 태블릿이나 다른 선생님께 이 링크를 보내 주세요. 쓴 답과 채점 기록은 링크에 담기지 않아요.</p>';
     const lb=document.createElement('div'); lb.className='linkbox';
     const li=document.createElement('input'); li.id='shareLink'; li.readOnly=true; li.setAttribute('aria-label','공유 링크');
     li.addEventListener('focus',()=>li.select());
@@ -936,6 +1086,7 @@ button{cursor:pointer;border:0;background:none}
     else {pendingDel=null;renderSettings();}
   }
   if(!['answer','result','settings'].includes(S.view)) S.view='answer';
+  if(S.view==='settings'&&S.pin) S.view='answer';
   const appliedOnLoad=applyHash();
   renderAll();
   if(appliedOnLoad) toast('공유받은 설정을 불러왔어요 · '+summaryText());
